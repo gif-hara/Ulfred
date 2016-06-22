@@ -18,21 +18,41 @@ namespace Ulfred
 
         private GUISkin skin;
 
+		private Vector2 scrollPosition = Vector2.zero;
+
+		public static Data CurrentData
+		{
+			get
+			{
+				if(data == null)
+				{
+					LoadData();
+				}
+
+				return data;
+			}
+		}
+		private static Data data = null;
+
+		private const string FileDirectory = "Ulfred";
+
+		private const string FileName = "/data.dat";
+
         [MenuItem("Window/Ulfred &u")]
         public static void ShowWindow()
         {
             var window = EditorWindow.GetWindow<UlfredEditorWindow>(true, "Ulfred", true);
             window.skin = AssetDatabase.LoadAssetAtPath<GUISkin>( "Assets/Editor/Ulfred/UlfredGUISkin.guiskin" );
             window.isFirstUpdate = true;
-            window.minSize = new Vector2( 765.0f, 847.0f );
-            window.position = new Rect( (Screen.currentResolution.width - 765.0f) / 2, (Screen.currentResolution.height - 847.0f) / 2, 765.0f, 847.0f);
-            Debug.Log( Screen.width );
+			window.minSize = CurrentData.size;
+			window.position = new Rect( (Screen.currentResolution.width - window.minSize.x) / 2, (Screen.currentResolution.height - window.minSize.y) / 2, window.minSize.x, window.minSize.y);
+			Debug.Log( Screen.currentResolution.height );
         }
 
         void Update()
         {
             this.Repaint();
-            //Debug.Log( this.position.ToString() );
+			Debug.Log( this.position.ToString() );
         }
 
         void OnGUI()
@@ -42,28 +62,30 @@ namespace Ulfred
             var iconSize = EditorGUIUtility.GetIconSize();
             EditorGUIUtility.SetIconSize( Vector2.one * this.skin.GetStyle( "fileLabel" ).fontSize );
 
+			this.scrollPosition = EditorGUILayout.BeginScrollView(this.scrollPosition);
             for( int i = 0; i < imax; i++ )
             {
                 var path = AssetDatabase.GUIDToAssetPath( this.findAssetPaths[i] );
-                var fileName = path.Substring( path.LastIndexOf("/") + 1 );
                 var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
-                GUILayout.BeginVertical( this.skin.GetStyle( "elementBackground" ) );
-                EditorGUILayout.LabelField( GetGUIContent( obj ), this.skin.GetStyle( "fileLabel" ) );
+				EditorGUILayout.BeginVertical( this.skin.GetStyle( "elementBackground" ) );
+				EditorGUILayout.Toggle( GetGUIContent( obj ), true, this.skin.GetStyle( "fileLabel" ) );
                 EditorGUILayout.LabelField( path, this.skin.GetStyle( "pathLabel" ) );
-                GUILayout.EndVertical();
+				EditorGUILayout.EndVertical();
             }
+			EditorGUILayout.EndScrollView();
+
             EditorGUIUtility.SetIconSize( iconSize );
-            if( Event.current.keyCode == KeyCode.Return )
-            {
-                this.Close();
-            }
+//            if( Event.current.keyCode == KeyCode.Return )
+//            {
+//                this.Close();
+//            }
         }
 
         private void DrawSearchTextField()
         {
             GUI.SetNextControlName( "SearchTextField" );
             EditorGUI.BeginChangeCheck();
-            this.search = EditorGUILayout.TextField( this.search, this.skin.textField );
+			this.search = EditorGUILayout.TextField( this.search, this.skin.GetStyle("searchTextField") );
             if( EditorGUI.EndChangeCheck() )
             {
                 this.findAssetPaths = new List<string>( AssetDatabase.FindAssets( this.search ) );
@@ -89,5 +111,23 @@ namespace Ulfred
 
             return content;
         }
+			
+		private static void LoadData()
+		{
+			if( data != null )
+			{
+				return;
+			}
+
+			var loadObject = UnityEditorInternal.InternalEditorUtility.LoadSerializedFileAndForget( FileDirectory + FileName );
+			if( loadObject.Length > 0 )
+			{
+				data = loadObject[0] as Data;
+			}
+			else
+			{
+				data = ScriptableObject.CreateInstance<Data>();
+			}
+		}
     }
 }
