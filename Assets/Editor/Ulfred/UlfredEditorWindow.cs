@@ -20,6 +20,8 @@ namespace Ulfred
 
 		private Vector2 scrollPosition = Vector2.zero;
 
+        private int index = 0;
+
 		public static Data CurrentData
 		{
 			get
@@ -38,6 +40,8 @@ namespace Ulfred
 
 		private const string FileName = "/data.dat";
 
+        private const string SearchTextFieldControlName = "SearchTextField";
+
         [MenuItem("Window/Ulfred &u")]
         public static void ShowWindow()
         {
@@ -52,7 +56,7 @@ namespace Ulfred
         void Update()
         {
             this.Repaint();
-			Debug.Log( this.position.ToString() );
+			//Debug.Log( this.position.ToString() );
         }
 
         void OnGUI()
@@ -68,7 +72,7 @@ namespace Ulfred
                 var path = AssetDatabase.GUIDToAssetPath( this.findAssetPaths[i] );
                 var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
 				EditorGUILayout.BeginVertical( this.skin.GetStyle( "elementBackground" ) );
-				EditorGUILayout.Toggle( GetGUIContent( obj ), true, this.skin.GetStyle( "fileLabel" ) );
+				EditorGUILayout.LabelField( GetGUIContent( obj ), this.skin.GetStyle( "fileLabel" ) );
                 EditorGUILayout.LabelField( path, this.skin.GetStyle( "pathLabel" ) );
 				EditorGUILayout.EndVertical();
             }
@@ -83,7 +87,7 @@ namespace Ulfred
 
         private void DrawSearchTextField()
         {
-            GUI.SetNextControlName( "SearchTextField" );
+            GUI.SetNextControlName( SearchTextFieldControlName );
             EditorGUI.BeginChangeCheck();
 			this.search = EditorGUILayout.TextField( this.search, this.skin.GetStyle("searchTextField") );
             if( EditorGUI.EndChangeCheck() )
@@ -96,6 +100,15 @@ namespace Ulfred
             {
                 this.isFirstUpdate = false;
                 EditorGUI.FocusTextInControl( "SearchTextField" );
+            }
+
+            if( GUI.GetNameOfFocusedControl() == SearchTextFieldControlName )
+            {
+                if( Event.current.keyCode == KeyCode.DownArrow )
+                {
+                    this.index++;
+                    Debug.Log("index = " + this.index);
+                }
             }
         }
 
@@ -129,5 +142,10 @@ namespace Ulfred
 				data = ScriptableObject.CreateInstance<Data>();
 			}
 		}
+
+        private GUIStyle GetStyle( bool isActive, string activeName, string inactiveName )
+        {
+            return this.skin.GetStyle( isActive ? activeName : inactiveName );
+        }
     }
 }
