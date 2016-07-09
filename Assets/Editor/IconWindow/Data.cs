@@ -2,7 +2,7 @@
 using UnityEngine.Assertions;
 using System.Collections.Generic;
 
-namespace Ulfred
+namespace IconWindow
 {
 	/// <summary>
 	/// .
@@ -10,8 +10,8 @@ namespace Ulfred
 	[System.Serializable]
 	public class Data : ScriptableObject
 	{
-		public Vector2 size = new Vector2( Screen.currentResolution.width / 2, Screen.currentResolution.height / 2 );
+		public Texture2D texture;
 
-		public int searchCount = 10;
+
 	}
 }
