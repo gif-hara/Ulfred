@@ -14,7 +14,7 @@ namespace Ulfred
 
 		private bool isFirstUpdate = true;
 
-		private List<string> findAssetPaths = new List<string>();
+		private List<string> findAssetGuids = new List<string>();
 
 		private GUISkin skin;
 
@@ -75,7 +75,7 @@ namespace Ulfred
 			if( this.GetKeyDown( KeyCode.DownArrow ) )
 			{
 				this.index++;
-				var max = this.findAssetPaths.Count - 1;
+				var max = this.findAssetGuids.Count - 1;
 				max = max > CurrentData.searchCount - 1 ? CurrentData.searchCount - 1 : max;
 				this.index = this.index > max ? max : this.index;
 			}
@@ -86,10 +86,10 @@ namespace Ulfred
 			}
 			if( this.GetKeyDown( KeyCode.Return ) )
 			{
-				if( this.findAssetPaths.Count > 0 )
+				if( this.findAssetGuids.Count > 0 )
 				{
 					this.Close();
-					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( this.findAssetPaths[this.index] ), typeof( Object ) ) as Object;
+					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( this.findAssetGuids[this.index] ), typeof( Object ) ) as Object;
 					if( Event.current.command )
 					{
 						AssetDatabase.OpenAsset( selectObject );
@@ -125,7 +125,7 @@ namespace Ulfred
 
 		private void DrawSearchResult()
 		{
-			int imax = this.findAssetPaths.Count > CurrentData.searchCount ? CurrentData.searchCount : this.findAssetPaths.Count;
+			int imax = this.findAssetGuids.Count > CurrentData.searchCount ? CurrentData.searchCount : this.findAssetGuids.Count;
 			var iconSize = EditorGUIUtility.GetIconSize();
 			EditorGUIUtility.SetIconSize( this.IconSize );
 
@@ -133,7 +133,7 @@ namespace Ulfred
 			for( int i = 0; i < imax; i++ )
 			{
 				var isActive = i == this.index;
-				var path = AssetDatabase.GUIDToAssetPath( this.findAssetPaths[i] );
+				var path = AssetDatabase.GUIDToAssetPath( this.findAssetGuids[i] );
 				var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
 
 				var rect = this.GetFindAssetRect( i );
@@ -168,11 +168,11 @@ namespace Ulfred
 		{
 			if( string.IsNullOrEmpty( this.search ) )
 			{
-				this.findAssetPaths = new List<string>();
+				this.findAssetGuids = new List<string>();
 				return;
 			}
 
-			this.findAssetPaths = new List<string>( AssetDatabase.FindAssets( this.search ) );
+			this.findAssetGuids = new List<string>( AssetDatabase.FindAssets( this.search ) );
 		}
 
 		private static void LoadData()
@@ -247,7 +247,7 @@ namespace Ulfred
 			get
 			{
 				var findAssetViewRect = this.FindAssetViewRect;
-				var heightCount = this.findAssetPaths.Count;
+				var heightCount = this.findAssetGuids.Count;
 				heightCount = heightCount > CurrentData.searchCount ? CurrentData.searchCount : heightCount;
 				return new Rect( 0.0f, findAssetViewRect.y, 0.0f, heightCount * FindAssetGUIHeight );
 			}
