@@ -113,7 +113,7 @@ namespace Ulfred
 			this.search = EditorGUI.TextField( this.SearchTextFieldRect, this.search, this.SearchTextFieldStyle );
 			if( EditorGUI.EndChangeCheck() )
 			{
-				this.findAssetPaths = new List<string>( AssetDatabase.FindAssets( this.search ) );
+				SearchAssets();
 			}
 
 			if( this.isFirstUpdate )
@@ -162,6 +162,17 @@ namespace Ulfred
 			content.tooltip = AssetDatabase.GetAssetPath( obj );
 
 			return content;
+		}
+
+		private void SearchAssets()
+		{
+			if( string.IsNullOrEmpty( this.search ) )
+			{
+				this.findAssetPaths = new List<string>();
+				return;
+			}
+
+			this.findAssetPaths = new List<string>( AssetDatabase.FindAssets( this.search ) );
 		}
 
 		private static void LoadData()
