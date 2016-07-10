@@ -22,6 +22,10 @@ namespace Ulfred
 
 		private int index = 0;
 
+		private Rect selectedRect;
+
+		private const float FindAssetGUIHeight = 82.0f;
+
 		public static Data CurrentData
 		{
 			get
@@ -84,19 +88,29 @@ namespace Ulfred
 			{
 				if( this.findAssetPaths.Count > 0 )
 				{
-					Selection.activeObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( this.findAssetPaths[this.index] ), typeof( Object ) ) as Object;
 					this.Close();
+					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( this.findAssetPaths[this.index] ), typeof( Object ) ) as Object;
+					if( Event.current.command )
+					{
+						AssetDatabase.OpenAsset( selectObject );
+					}
+					else
+					{
+						Selection.activeObject = selectObject;
+					}
 				}
-
+			}
+			if( this.GetKeyDown( KeyCode.LeftArrow ) )
+			{
+				Debug.Log( "selectedRect = " + this.selectedRect );
 			}
 		}
 
 		private void DrawSearchTextField()
 		{
-
 			GUI.SetNextControlName( SearchTextFieldControlName );
 			EditorGUI.BeginChangeCheck();
-			this.search = EditorGUILayout.TextField( this.search, this.skin.GetStyle( "searchTextField" ) );
+			this.search = EditorGUI.TextField( this.SearchTextFieldRect, this.search, this.SearchTextFieldStyle );
 			if( EditorGUI.EndChangeCheck() )
 			{
 				this.findAssetPaths = new List<string>( AssetDatabase.FindAssets( this.search ) );
@@ -113,20 +127,27 @@ namespace Ulfred
 		{
 			int imax = this.findAssetPaths.Count > CurrentData.searchCount ? CurrentData.searchCount : this.findAssetPaths.Count;
 			var iconSize = EditorGUIUtility.GetIconSize();
-			EditorGUIUtility.SetIconSize( Vector2.zero );
+			EditorGUIUtility.SetIconSize( this.IconSize );
 
-			this.scrollPosition = EditorGUILayout.BeginScrollView( this.scrollPosition );
+			this.scrollPosition = GUI.BeginScrollView( this.FindAssetViewRect, this.scrollPosition, this.FindAssetTableRect );
 			for( int i = 0; i < imax; i++ )
 			{
 				var isActive = i == this.index;
 				var path = AssetDatabase.GUIDToAssetPath( this.findAssetPaths[i] );
 				var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
-				EditorGUILayout.BeginVertical( this.GetStyle( isActive, "elementBackgroundActive", "elementBackgroundDeactive" ) );
-				EditorGUILayout.LabelField( GetGUIContent( obj ), this.GetStyle( isActive, "fileLabelActive", "fileLabelDeactive" ) );
-				EditorGUILayout.LabelField( path, this.GetStyle( isActive, "pathLabelActive", "pathLabelDeactive" ) );
-				EditorGUILayout.EndVertical();
+
+				var rect = this.GetFindAssetRect( i );
+				GUI.Box( rect, "", this.GetStyle( isActive, "elementBackgroundActive", "elementBackgroundDeactive" ) );
+
+				var guiStyle = this.GetStyle( isActive, "fileLabelActive", "fileLabelDeactive" );
+				rect = new Rect( rect.x, rect.y + 8, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
+				GUI.Label( rect, GetGUIContent( obj ), guiStyle );
+
+				guiStyle = this.GetStyle( isActive, "pathLabelActive", "pathLabelDeactive" );
+				rect = new Rect( rect.x, rect.y + rect.height + 8, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
+				GUI.Label( rect, path, guiStyle );
 			}
-			EditorGUILayout.EndScrollView();
+			GUI.EndScrollView();
 			EditorGUIUtility.SetIconSize( iconSize );
 		}
 
@@ -166,6 +187,14 @@ namespace Ulfred
 			return this.skin.GetStyle( isActive ? activeName : inactiveName );
 		}
 
+		private GUIStyle SearchTextFieldStyle
+		{
+			get
+			{
+				return this.skin.GetStyle( "searchTextField" );
+			}
+		}
+
 		private bool GetKeyDown( KeyCode keyCode )
 		{
 			if( Event.current.type != EventType.KeyDown )
@@ -174,6 +203,64 @@ namespace Ulfred
 			}
 
 			return Event.current.keyCode == keyCode;
+		}
+
+		private Vector2 IconSize
+		{
+			get
+			{
+				return Vector2.one * this.skin.GetStyle( "fileLabelActive" ).fontSize;
+			}
+		}
+
+		private Rect SearchTextFieldRect
+		{
+			get
+			{
+				var style = this.SearchTextFieldStyle;
+				return new Rect( Vector2.zero, new Vector2( this.position.width, style.CalcHeight( GUIContent.none, this.position.width ) ) );
+			}
+		}
+
+		private Rect FindAssetViewRect
+		{
+			get
+			{
+				var searchTextFieldRect = this.SearchTextFieldRect;
+				return new Rect( 0.0f, searchTextFieldRect.height, this.position.width, this.position.height - searchTextFieldRect.height );
+			}
+		}
+
+		private Rect FindAssetTableRect
+		{
+			get
+			{
+				var findAssetViewRect = this.FindAssetViewRect;
+				var heightCount = this.findAssetPaths.Count;
+				heightCount = heightCount > CurrentData.searchCount ? CurrentData.searchCount : heightCount;
+				return new Rect( 0.0f, findAssetViewRect.y, 0.0f, heightCount * FindAssetGUIHeight );
+			}
+		}
+
+		private Rect GetFindAssetRect( int index )
+		{
+			var searchTextFieldRect = this.SearchTextFieldRect;
+			return new Rect(
+				searchTextFieldRect.x,
+				searchTextFieldRect.height + ( index * FindAssetGUIHeight ),
+				searchTextFieldRect.width,
+				80
+			);
+		}
+
+		private Rect AddRect( Rect rect, int addY )
+		{
+			return new Rect( rect.x, rect.y + addY, rect.width, rect.height );
+		}
+
+		private Rect NextRect( Rect rect, int offsetY )
+		{
+			return new Rect( rect.x, rect.y + rect.height + offsetY, rect.width, rect.height );
 		}
 	}
 }
