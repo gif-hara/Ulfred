@@ -13,5 +13,11 @@ namespace Ulfred
 		public Vector2 size = new Vector2( Screen.currentResolution.width / 2, Screen.currentResolution.height / 2 );
 
 		public int searchCount = 10;
+
+		public int fileLabelMargin = 16;
+
+		public int pathLabelMargin = 8;
+
+		public int elementMargin = 40;
 	}
 }

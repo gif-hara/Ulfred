@@ -22,8 +22,6 @@ namespace Ulfred
 
 		private int index = 0;
 
-		private Rect selectedRect;
-
 		private const float FindAssetGUIHeight = 82.0f;
 
 		public static Data CurrentData
@@ -100,10 +98,6 @@ namespace Ulfred
 					}
 				}
 			}
-			if( this.GetKeyDown( KeyCode.LeftArrow ) )
-			{
-				Debug.Log( "selectedRect = " + this.selectedRect );
-			}
 		}
 
 		private void DrawSearchTextField()
@@ -136,15 +130,15 @@ namespace Ulfred
 				var path = AssetDatabase.GUIDToAssetPath( this.findAssetGuids[i] );
 				var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
 
-				var rect = this.GetFindAssetRect( i );
-				GUI.Box( rect, "", this.GetStyle( isActive, "elementBackgroundActive", "elementBackgroundDeactive" ) );
+				var rect = this.GetFindAssetRect( i, isActive );
+				GUI.Box( rect, "", this.ElementBackgroundStyle( isActive ) );
 
 				var guiStyle = this.GetStyle( isActive, "fileLabelActive", "fileLabelDeactive" );
-				rect = new Rect( rect.x, rect.y + 8, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
+				rect = new Rect( rect.x, rect.y + CurrentData.fileLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
 				GUI.Label( rect, GetGUIContent( obj ), guiStyle );
 
 				guiStyle = this.GetStyle( isActive, "pathLabelActive", "pathLabelDeactive" );
-				rect = new Rect( rect.x, rect.y + rect.height + 8, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
+				rect = new Rect( rect.x, rect.y + rect.height + CurrentData.pathLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
 				GUI.Label( rect, path, guiStyle );
 			}
 			GUI.EndScrollView();
@@ -190,19 +184,6 @@ namespace Ulfred
 			else
 			{
 				data = ScriptableObject.CreateInstance<Data>();
-			}
-		}
-
-		private GUIStyle GetStyle( bool isActive, string activeName, string inactiveName )
-		{
-			return this.skin.GetStyle( isActive ? activeName : inactiveName );
-		}
-
-		private GUIStyle SearchTextFieldStyle
-		{
-			get
-			{
-				return this.skin.GetStyle( "searchTextField" );
 			}
 		}
 
@@ -253,25 +234,49 @@ namespace Ulfred
 			}
 		}
 
-		private Rect GetFindAssetRect( int index )
+		private Rect GetFindAssetRect( int index, bool isActive )
 		{
 			var searchTextFieldRect = this.SearchTextFieldRect;
+			var height = 
+				this.FileLabelStyle( isActive ).CalcHeight( GUIContent.none, searchTextFieldRect.width )
+				+ this.PathLabelStyle( isActive ).CalcHeight( GUIContent.none, SearchTextFieldRect.width )
+				+ CurrentData.elementMargin;
+				
 			return new Rect(
 				searchTextFieldRect.x,
-				searchTextFieldRect.height + ( index * FindAssetGUIHeight ),
+				searchTextFieldRect.height + ( index * height ),
 				searchTextFieldRect.width,
-				80
+				height
 			);
 		}
 
-		private Rect AddRect( Rect rect, int addY )
+		private GUIStyle SearchTextFieldStyle
 		{
-			return new Rect( rect.x, rect.y + addY, rect.width, rect.height );
+			get
+			{
+				return this.skin.GetStyle( "searchTextField" );
+			}
 		}
 
-		private Rect NextRect( Rect rect, int offsetY )
+		private GUIStyle ElementBackgroundStyle( bool isActive )
 		{
-			return new Rect( rect.x, rect.y + rect.height + offsetY, rect.width, rect.height );
+			return this.GetStyle( isActive, "elementBackgroundActive", "elementBackgroundDeactive" );
 		}
+
+		private GUIStyle FileLabelStyle( bool isActive )
+		{
+			return this.GetStyle( isActive, "fileLabelActive", "fileLabelDeactive" );
+		}
+
+		private GUIStyle PathLabelStyle( bool isActive )
+		{
+			return this.GetStyle( isActive, "pathLabelActive", "pathLabelDeactive" );
+		}
+
+		private GUIStyle GetStyle( bool isActive, string activeName, string inactiveName )
+		{
+			return this.skin.GetStyle( isActive ? activeName : inactiveName );
+		}
+
 	}
 }
