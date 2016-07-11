@@ -131,18 +131,20 @@ namespace Ulfred
 				var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
 
 				var rect = this.GetFindAssetRect( i, isActive );
-				GUI.Box( rect, "", this.ElementBackgroundStyle( isActive ) );
+				GUI.Box( rect, GUIContent.none, this.ElementBackgroundStyle( isActive ) );
 
-				var guiStyle = this.GetStyle( isActive, "fileLabelActive", "fileLabelDeactive" );
+				var guiStyle = this.FileLabelStyle( isActive );
 				rect = new Rect( rect.x, rect.y + CurrentData.fileLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
 				GUI.Label( rect, GetGUIContent( obj ), guiStyle );
 
-				guiStyle = this.GetStyle( isActive, "pathLabelActive", "pathLabelDeactive" );
+				guiStyle = this.PathLabelStyle( isActive );
 				rect = new Rect( rect.x, rect.y + rect.height + CurrentData.pathLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
 				GUI.Label( rect, path, guiStyle );
 			}
 			GUI.EndScrollView();
 			EditorGUIUtility.SetIconSize( iconSize );
+
+			//GUI.Box( this.FindAssetViewRect, GUIContent.none, this.ElementBackgroundStyle( false ) );
 		}
 
 		private GUIContent GetGUIContent( UnityEngine.Object obj )
