@@ -143,8 +143,6 @@ namespace Ulfred
 			}
 			GUI.EndScrollView();
 			EditorGUIUtility.SetIconSize( iconSize );
-
-			//GUI.Box( this.FindAssetViewRect, GUIContent.none, this.ElementBackgroundStyle( false ) );
 		}
 
 		private GUIContent GetGUIContent( UnityEngine.Object obj )
