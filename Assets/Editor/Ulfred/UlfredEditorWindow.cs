@@ -77,8 +77,7 @@ namespace Ulfred
 				if( this.selectIndex >= CurrentData.searchCount - 1 )
 				{
 					this.listIndex++;
-					var max = ( this.findAssetGuids.Count - 1 ) - CurrentData.searchCount;
-					max = max < 0 ? 0 : max;
+					var max = this.ListIndexMax;
 					this.listIndex = this.listIndex > max ? max : this.listIndex;
 				}
 				else
@@ -120,7 +119,7 @@ namespace Ulfred
 					}
 				}
 			}
-			if( Event.current.character > 0 )
+			if( Event.current.character > 0 || Event.current.keyCode == KeyCode.Backspace || Event.current.keyCode == KeyCode.Delete )
 			{
 				this.selectIndex = 0;
 				this.listIndex = 0;
@@ -167,7 +166,10 @@ namespace Ulfred
 				rect = new Rect( rect.x, rect.y + rect.height + CurrentData.pathLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
 				GUI.Label( rect, path, guiStyle );
 			}
-			this.scrollPosition = GUI.BeginScrollView( this.FindAssetViewRect, this.scrollPosition, this.FindAssetTableRect );
+
+			var findAssetTableRect = this.FindAssetTableRect;
+			var scrollY = findAssetTableRect.height * ((float)this.listIndex / this.findAssetGuids.Count);
+			GUI.BeginScrollView( this.FindAssetViewRect, new Vector2(0.0f, scrollY), findAssetTableRect );
 			GUI.EndScrollView();
 			EditorGUIUtility.SetIconSize( iconSize );
 		}
@@ -316,6 +318,17 @@ namespace Ulfred
 				                    + this.PathLabelStyle( true ).CalcHeight( GUIContent.none, SearchTextFieldRect.width )
 				                    + CurrentData.elementMargin;
 				result.y += elementHeight * 5;
+
+				return result;
+			}
+		}
+
+		private int ListIndexMax
+		{
+			get
+			{
+				var result = ( this.findAssetGuids.Count - 1 ) - CurrentData.searchCount;
+				result = result < 0 ? 0 : result;
 
 				return result;
 			}
