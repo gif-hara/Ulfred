@@ -20,7 +20,9 @@ namespace Ulfred
 
 		private Vector2 scrollPosition = Vector2.zero;
 
-		private int index = 0;
+		private int listIndex = 0;
+
+		private int selectIndex = 0;
 
 		private const float FindAssetGUIHeight = 82.0f;
 
@@ -51,14 +53,14 @@ namespace Ulfred
 			var window = EditorWindow.GetWindow<UlfredEditorWindow>( true, "Ulfred", true );
 			window.skin = AssetDatabase.LoadAssetAtPath<GUISkin>( "Assets/Editor/Ulfred/UlfredGUISkin.guiskin" );
 			window.isFirstUpdate = true;
-			window.minSize = CurrentData.size;
+			window.minSize = window.WindowSize;
+			window.maxSize = window.WindowSize;
 			window.position = new Rect( ( Screen.currentResolution.width - window.minSize.x ) / 2, ( Screen.currentResolution.height - window.minSize.y ) / 2, window.minSize.x, window.minSize.y );
-			Debug.Log( Screen.currentResolution.height );
 		}
 
 		void Update()
 		{
-			this.Repaint();
+			//this.Repaint();
 		}
 
 		void OnGUI()
@@ -72,22 +74,42 @@ namespace Ulfred
 		{
 			if( this.GetKeyDown( KeyCode.DownArrow ) )
 			{
-				this.index++;
-				var max = this.findAssetGuids.Count - 1;
-				max = max > CurrentData.searchCount - 1 ? CurrentData.searchCount - 1 : max;
-				this.index = this.index > max ? max : this.index;
+				if( this.selectIndex >= CurrentData.searchCount - 1 )
+				{
+					this.listIndex++;
+					var max = ( this.findAssetGuids.Count - 1 ) - CurrentData.searchCount;
+					max = max < 0 ? 0 : max;
+					this.listIndex = this.listIndex > max ? max : this.listIndex;
+				}
+				else
+				{
+					this.selectIndex++;
+					var max = CurrentData.searchCount - 1;
+					max = max > this.findAssetGuids.Count - 1 ? this.findAssetGuids.Count - 1 : max;
+					this.selectIndex = this.selectIndex > max ? max : this.selectIndex;
+				}
+
+				Debug.Log( "this.listIndex = " + this.listIndex + " this.findAssetGuids.Count = " + this.findAssetGuids.Count );
 			}
 			if( this.GetKeyDown( KeyCode.UpArrow ) )
 			{
-				this.index--;
-				this.index = this.index < 0 ? 0 : this.index;
+				if( this.selectIndex <= 0 )
+				{
+					this.listIndex--;
+				}
+				else
+				{
+					this.selectIndex--;
+				}
+					
+				this.listIndex = this.listIndex < 0 ? 0 : this.listIndex;
 			}
 			if( this.GetKeyDown( KeyCode.Return ) )
 			{
 				if( this.findAssetGuids.Count > 0 )
 				{
 					this.Close();
-					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( this.findAssetGuids[this.index] ), typeof( Object ) ) as Object;
+					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( this.findAssetGuids[this.listIndex] ), typeof( Object ) ) as Object;
 					if( Event.current.command )
 					{
 						AssetDatabase.OpenAsset( selectObject );
@@ -97,6 +119,11 @@ namespace Ulfred
 						Selection.activeObject = selectObject;
 					}
 				}
+			}
+			if( Event.current.character > 0 )
+			{
+				this.selectIndex = 0;
+				this.listIndex = 0;
 			}
 		}
 
@@ -113,7 +140,7 @@ namespace Ulfred
 			if( this.isFirstUpdate )
 			{
 				this.isFirstUpdate = false;
-				EditorGUI.FocusTextInControl( "SearchTextField" );
+				EditorGUI.FocusTextInControl( SearchTextFieldControlName );
 			}
 		}
 
@@ -123,11 +150,10 @@ namespace Ulfred
 			var iconSize = EditorGUIUtility.GetIconSize();
 			EditorGUIUtility.SetIconSize( this.IconSize );
 
-			this.scrollPosition = GUI.BeginScrollView( this.FindAssetViewRect, this.scrollPosition, this.FindAssetTableRect );
 			for( int i = 0; i < imax; i++ )
 			{
-				var isActive = i == this.index;
-				var path = AssetDatabase.GUIDToAssetPath( this.findAssetGuids[i] );
+				var isActive = i == this.selectIndex;
+				var path = AssetDatabase.GUIDToAssetPath( this.findAssetGuids[this.listIndex + i] );
 				var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
 
 				var rect = this.GetFindAssetRect( i, isActive );
@@ -141,6 +167,7 @@ namespace Ulfred
 				rect = new Rect( rect.x, rect.y + rect.height + CurrentData.pathLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
 				GUI.Label( rect, path, guiStyle );
 			}
+			this.scrollPosition = GUI.BeginScrollView( this.FindAssetViewRect, this.scrollPosition, this.FindAssetTableRect );
 			GUI.EndScrollView();
 			EditorGUIUtility.SetIconSize( iconSize );
 		}
@@ -229,7 +256,6 @@ namespace Ulfred
 			{
 				var findAssetViewRect = this.FindAssetViewRect;
 				var heightCount = this.findAssetGuids.Count;
-				heightCount = heightCount > CurrentData.searchCount ? CurrentData.searchCount : heightCount;
 				return new Rect( 0.0f, findAssetViewRect.y, 0.0f, heightCount * FindAssetGUIHeight );
 			}
 		}
@@ -278,5 +304,21 @@ namespace Ulfred
 			return this.skin.GetStyle( isActive ? activeName : inactiveName );
 		}
 
+		private Vector2 WindowSize
+		{
+			get
+			{
+				var result = new Vector2();
+				var searchTextFieldRect = this.SearchTextFieldRect;
+				result.x = Screen.currentResolution.width / 2;
+				result.y += searchTextFieldRect.height;
+				var elementHeight = this.FileLabelStyle( true ).CalcHeight( GUIContent.none, searchTextFieldRect.width )
+				                    + this.PathLabelStyle( true ).CalcHeight( GUIContent.none, SearchTextFieldRect.width )
+				                    + CurrentData.elementMargin;
+				result.y += elementHeight * 5;
+
+				return result;
+			}
+		}
 	}
 }
