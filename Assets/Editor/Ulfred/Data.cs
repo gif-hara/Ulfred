@@ -10,8 +10,6 @@ namespace Ulfred
 	[System.Serializable]
 	public class Data : ScriptableObject
 	{
-		public Vector2 size = new Vector2( Screen.currentResolution.width / 2, Screen.currentResolution.height / 2 );
-
 		public int searchCount = 5;
 
 		public int fileLabelMargin = 16;
@@ -19,5 +17,32 @@ namespace Ulfred
 		public int pathLabelMargin = 8;
 
 		public int elementMargin = 40;
+
+		public List<AccessCount> accessCounts;
+
+		public void AddAccessCount( string guid )
+		{
+			var accessCount = this.accessCounts.Find( a => a.guid == guid );
+			if( accessCount == null )
+			{
+				accessCount = new AccessCount( guid );
+				this.accessCounts.Add( accessCount );
+			}
+			accessCount.count++;
+		}
+	}
+
+	[System.Serializable]
+	public class AccessCount
+	{
+		public string guid;
+
+		public int count;
+
+		public AccessCount( string guid )
+		{
+			this.guid = guid;
+			this.count = 0;
+		}
 	}
 }

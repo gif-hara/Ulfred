@@ -2,6 +2,7 @@
 using UnityEngine.Assertions;
 using System.Collections.Generic;
 using UnityEditor;
+using System.IO;
 
 namespace Ulfred
 {
@@ -26,6 +27,10 @@ namespace Ulfred
 
 		private const float FindAssetGUIHeight = 82.0f;
 
+		private const string FileDirectory = "Ulfred";
+
+		private const string FileName = "/data.dat";
+
 		public static Data CurrentData
 		{
 			get
@@ -41,10 +46,6 @@ namespace Ulfred
 
 		private static Data data = null;
 
-		private const string FileDirectory = "Ulfred";
-
-		private const string FileName = "/data.dat";
-
 		private const string SearchTextFieldControlName = "SearchTextField";
 
 		[MenuItem( "Window/Ulfred &u" )]
@@ -58,9 +59,9 @@ namespace Ulfred
 			window.position = new Rect( ( Screen.currentResolution.width - window.minSize.x ) / 2, ( Screen.currentResolution.height - window.minSize.y ) / 2, window.minSize.x, window.minSize.y );
 		}
 
-		void Update()
+		void OnLostFocus()
 		{
-			//this.Repaint();
+			this.Close();
 		}
 
 		void OnGUI()
@@ -87,28 +88,29 @@ namespace Ulfred
 					max = max > this.findAssetGuids.Count - 1 ? this.findAssetGuids.Count - 1 : max;
 					this.selectIndex = this.selectIndex > max ? max : this.selectIndex;
 				}
-
-				Debug.Log( "this.listIndex = " + this.listIndex + " this.findAssetGuids.Count = " + this.findAssetGuids.Count );
 			}
 			if( this.GetKeyDown( KeyCode.UpArrow ) )
 			{
 				if( this.selectIndex <= 0 )
 				{
 					this.listIndex--;
+					this.listIndex = this.listIndex < 0 ? 0 : this.listIndex;
 				}
 				else
 				{
 					this.selectIndex--;
+					this.selectIndex = this.selectIndex < 0 ? 0 : this.selectIndex;
 				}
-					
-				this.listIndex = this.listIndex < 0 ? 0 : this.listIndex;
 			}
 			if( this.GetKeyDown( KeyCode.Return ) )
 			{
 				if( this.findAssetGuids.Count > 0 )
 				{
 					this.Close();
-					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( this.findAssetGuids[this.listIndex] ), typeof( Object ) ) as Object;
+					var guid = this.findAssetGuids[this.listIndex + this.selectIndex];
+					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( guid ), typeof( Object ) ) as Object;
+					CurrentData.AddAccessCount( guid );
+					Save();
 					if( Event.current.command )
 					{
 						AssetDatabase.OpenAsset( selectObject );
@@ -118,6 +120,10 @@ namespace Ulfred
 						Selection.activeObject = selectObject;
 					}
 				}
+			}
+			if( this.GetKeyDown( KeyCode.Escape ) )
+			{
+				this.Close();
 			}
 			if( Event.current.character > 0 || Event.current.keyCode == KeyCode.Backspace || Event.current.keyCode == KeyCode.Delete )
 			{
@@ -168,8 +174,8 @@ namespace Ulfred
 			}
 
 			var findAssetTableRect = this.FindAssetTableRect;
-			var scrollY = findAssetTableRect.height * ((float)this.listIndex / this.findAssetGuids.Count);
-			GUI.BeginScrollView( this.FindAssetViewRect, new Vector2(0.0f, scrollY), findAssetTableRect );
+			var scrollY = findAssetTableRect.height * ( (float)this.listIndex / this.findAssetGuids.Count );
+			GUI.BeginScrollView( this.FindAssetViewRect, new Vector2( 0.0f, scrollY ), findAssetTableRect );
 			GUI.EndScrollView();
 			EditorGUIUtility.SetIconSize( iconSize );
 		}
@@ -195,7 +201,11 @@ namespace Ulfred
 				return;
 			}
 
+			var s = new System.Diagnostics.Stopwatch();
+			s.Start();
 			this.findAssetGuids = new List<string>( AssetDatabase.FindAssets( this.search ) );
+			s.Stop();
+			Debug.Log("Search " + s.ElapsedMilliseconds + "ms");
 		}
 
 		private static void LoadData()
@@ -213,7 +223,15 @@ namespace Ulfred
 			else
 			{
 				data = ScriptableObject.CreateInstance<Data>();
+				Save();
 			}
+		}
+
+		private static void Save()
+		{
+			Directory.CreateDirectory( FileDirectory );
+			File.Delete( FileDirectory + FileName );
+			UnityEditorInternal.InternalEditorUtility.SaveToSerializedFileAndForget( new UnityEngine.Object[]{ CurrentData }, FileDirectory + FileName, true );
 		}
 
 		private bool GetKeyDown( KeyCode keyCode )
@@ -317,7 +335,7 @@ namespace Ulfred
 				var elementHeight = this.FileLabelStyle( true ).CalcHeight( GUIContent.none, searchTextFieldRect.width )
 				                    + this.PathLabelStyle( true ).CalcHeight( GUIContent.none, SearchTextFieldRect.width )
 				                    + CurrentData.elementMargin;
-				result.y += elementHeight * 5;
+				result.y += elementHeight * CurrentData.searchCount;
 
 				return result;
 			}
