@@ -15,7 +15,7 @@ namespace Ulfred
 
 		private bool isFirstUpdate = true;
 
-		private List<string> findAssetGuids = new List<string>();
+		private List<AccessCount> findAssetCounts = new List<AccessCount>();
 
 		private GUISkin skin;
 
@@ -85,7 +85,7 @@ namespace Ulfred
 				{
 					this.selectIndex++;
 					var max = CurrentData.searchCount - 1;
-					max = max > this.findAssetGuids.Count - 1 ? this.findAssetGuids.Count - 1 : max;
+					max = max > this.findAssetCounts.Count - 1 ? this.findAssetCounts.Count - 1 : max;
 					this.selectIndex = this.selectIndex > max ? max : this.selectIndex;
 				}
 			}
@@ -104,10 +104,10 @@ namespace Ulfred
 			}
 			if( this.GetKeyDown( KeyCode.Return ) )
 			{
-				if( this.findAssetGuids.Count > 0 )
+				if( this.findAssetCounts.Count > 0 )
 				{
 					this.Close();
-					var guid = this.findAssetGuids[this.listIndex + this.selectIndex];
+					var guid = this.findAssetCounts[this.listIndex + this.selectIndex].guid;
 					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( guid ), typeof( Object ) ) as Object;
 					CurrentData.AddAccessCount( guid );
 					Save();
@@ -151,14 +151,14 @@ namespace Ulfred
 
 		private void DrawSearchResult()
 		{
-			int imax = this.findAssetGuids.Count > CurrentData.searchCount ? CurrentData.searchCount : this.findAssetGuids.Count;
+			int imax = this.findAssetCounts.Count > CurrentData.searchCount ? CurrentData.searchCount : this.findAssetCounts.Count;
 			var iconSize = EditorGUIUtility.GetIconSize();
 			EditorGUIUtility.SetIconSize( this.IconSize );
 
 			for( int i = 0; i < imax; i++ )
 			{
 				var isActive = i == this.selectIndex;
-				var path = AssetDatabase.GUIDToAssetPath( this.findAssetGuids[this.listIndex + i] );
+				var path = AssetDatabase.GUIDToAssetPath( this.findAssetCounts[this.listIndex + i].guid );
 				var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
 
 				var rect = this.GetFindAssetRect( i, isActive );
@@ -174,7 +174,7 @@ namespace Ulfred
 			}
 
 			var findAssetTableRect = this.FindAssetTableRect;
-			var scrollY = findAssetTableRect.height * ( (float)this.listIndex / this.findAssetGuids.Count );
+			var scrollY = findAssetTableRect.height * ( (float)this.listIndex / this.findAssetCounts.Count );
 			GUI.BeginScrollView( this.FindAssetViewRect, new Vector2( 0.0f, scrollY ), findAssetTableRect );
 			GUI.EndScrollView();
 			EditorGUIUtility.SetIconSize( iconSize );
@@ -197,15 +197,35 @@ namespace Ulfred
 		{
 			if( string.IsNullOrEmpty( this.search ) )
 			{
-				this.findAssetGuids = new List<string>();
+				this.findAssetCounts = new List<AccessCount>();
 				return;
 			}
 
 			var s = new System.Diagnostics.Stopwatch();
 			s.Start();
-			this.findAssetGuids = new List<string>( AssetDatabase.FindAssets( this.search ) );
+			var guids = AssetDatabase.FindAssets( this.search );
+			var notAccessGuids = new List<string>();
+			this.findAssetCounts = new List<AccessCount>();
+			for( var i = 0; i < guids.Length; i++ )
+			{
+				var accessCount = CurrentData.accessCounts.Find( a => a.guid == guids[i] );
+				if( accessCount != null )
+				{
+					this.findAssetCounts.Add( accessCount );
+				}
+				else
+				{
+					notAccessGuids.Add( guids[i] );
+				}
+			}
+			this.findAssetCounts.Sort( ( a, b ) => b.count - a.count );
+			for( var i = 0; i < notAccessGuids.Count; i++ )
+			{
+				this.findAssetCounts.Add( new AccessCount( notAccessGuids[i], 0 ) );
+			}
+
 			s.Stop();
-			Debug.Log("Search " + s.ElapsedMilliseconds + "ms");
+			Debug.Log( "Search " + s.ElapsedMilliseconds + "ms" );
 		}
 
 		private static void LoadData()
@@ -275,7 +295,7 @@ namespace Ulfred
 			get
 			{
 				var findAssetViewRect = this.FindAssetViewRect;
-				var heightCount = this.findAssetGuids.Count;
+				var heightCount = this.findAssetCounts.Count;
 				return new Rect( 0.0f, findAssetViewRect.y, 0.0f, heightCount * FindAssetGUIHeight );
 			}
 		}
@@ -345,7 +365,7 @@ namespace Ulfred
 		{
 			get
 			{
-				var result = ( this.findAssetGuids.Count - 1 ) - CurrentData.searchCount;
+				var result = ( this.findAssetCounts.Count - 1 ) - CurrentData.searchCount;
 				result = result < 0 ? 0 : result;
 
 				return result;

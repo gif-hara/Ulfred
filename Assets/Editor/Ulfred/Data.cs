@@ -18,14 +18,14 @@ namespace Ulfred
 
 		public int elementMargin = 40;
 
-		public List<AccessCount> accessCounts;
+		public List<AccessCount> accessCounts = new List<AccessCount>();
 
 		public void AddAccessCount( string guid )
 		{
 			var accessCount = this.accessCounts.Find( a => a.guid == guid );
 			if( accessCount == null )
 			{
-				accessCount = new AccessCount( guid );
+				accessCount = new AccessCount( guid, 0 );
 				this.accessCounts.Add( accessCount );
 			}
 			accessCount.count++;
@@ -39,10 +39,10 @@ namespace Ulfred
 
 		public int count;
 
-		public AccessCount( string guid )
+		public AccessCount( string guid, int count )
 		{
 			this.guid = guid;
-			this.count = 0;
+			this.count = count;
 		}
 	}
 }
