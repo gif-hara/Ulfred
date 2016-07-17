@@ -156,7 +156,7 @@ namespace Ulfred
 					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( guid ), typeof( Object ) ) as Object;
 					CurrentData.AddAccessCount( guid );
 					Save();
-					if( this.inputEvent.command )
+					if( Event.current.command || Event.current.control )
 					{
 						AssetDatabase.OpenAsset( selectObject );
 					}
