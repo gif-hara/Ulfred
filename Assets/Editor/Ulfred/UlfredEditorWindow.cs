@@ -25,6 +25,8 @@ namespace Ulfred
 
 		private int selectIndex = 0;
 
+		private GUIStyle logoStyle = null;
+
 		private const float FindAssetGUIHeight = 82.0f;
 
 		private const string FileDirectory = "Ulfred";
@@ -57,6 +59,7 @@ namespace Ulfred
 			window.minSize = window.WindowSize;
 			window.maxSize = window.WindowSize;
 			window.position = new Rect( ( Screen.currentResolution.width - window.minSize.x ) / 2, ( Screen.currentResolution.height - window.minSize.y ) / 2, window.minSize.x, window.minSize.y );
+			window.InitializeLogoStyle();
 		}
 
 		void Update()
@@ -77,10 +80,19 @@ namespace Ulfred
 			this.DrawSearchResult();
 		}
 
+		private void InitializeLogoStyle()
+		{
+			this.logoStyle = new GUIStyle(EditorStyles.boldLabel);
+			this.logoStyle.alignment = TextAnchor.LowerRight;
+			this.logoStyle.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+			this.logoStyle.fontSize = 128;
+		}
+
 		private void InputEvent()
 		{
 			if( this.GetKeyDown( KeyCode.DownArrow ) )
 			{
+				GUIUtility.keyboardControl = 0;
 				if( this.selectIndex >= CurrentData.searchCount - 1 )
 				{
 					this.listIndex++;
@@ -97,6 +109,7 @@ namespace Ulfred
 			}
 			if( this.GetKeyDown( KeyCode.UpArrow ) )
 			{
+				GUIUtility.keyboardControl = 0;
 				if( this.selectIndex <= 0 )
 				{
 					this.listIndex--;
@@ -140,11 +153,7 @@ namespace Ulfred
 
 		private void DrawUlfredLogo()
 		{
-			var guiStyle = new GUIStyle(EditorStyles.boldLabel);
-			guiStyle.alignment = TextAnchor.LowerRight;
-			guiStyle.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-			guiStyle.fontSize = 128;
-			EditorGUI.LabelField(new Rect(0, 0, this.position.width, this.position.height), "Ulfred", guiStyle);
+			EditorGUI.LabelField(new Rect(0, 0, this.position.width, this.position.height), "Ulfred", this.logoStyle);
 		}
 
 		private void DrawSearchTextField()
