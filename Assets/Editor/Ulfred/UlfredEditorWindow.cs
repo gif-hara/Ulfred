@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿//#define CheckPerformance_Search
+using UnityEngine;
 using UnityEngine.Assertions;
 using System.Collections.Generic;
 using UnityEditor;
@@ -13,8 +14,6 @@ namespace Ulfred
 	{
 		private string search = "";
 
-		private bool isFirstUpdate = true;
-
 		private List<AccessCount> findAssetCounts = new List<AccessCount>();
 
 		private GUISkin skin;
@@ -27,7 +26,15 @@ namespace Ulfred
 
 		private GUIStyle logoStyle = null;
 
+		private int searchTextFieldKeyboardControl = -1;
+
+		private int hiddenSearchTextFieldKeyboardControl = -1;
+
 		private const float FindAssetGUIHeight = 82.0f;
+
+		private const string SearchTextFieldControlName = "SearchTextField";
+
+		private const string HiddenSearchTextFieldControlName = "HiddenSearchTextField";
 
 		private const string FileDirectory = "Ulfred";
 
@@ -48,14 +55,11 @@ namespace Ulfred
 
 		private static Data data = null;
 
-		private const string SearchTextFieldControlName = "SearchTextField";
-
 		[MenuItem( "Window/Ulfred &u" )]
 		public static void ShowWindow()
 		{
 			var window = EditorWindow.GetWindow<UlfredEditorWindow>( true, "Ulfred", true );
 			window.skin = AssetDatabase.LoadAssetAtPath<GUISkin>( "Assets/Editor/Ulfred/UlfredGUISkin.guiskin" );
-			window.isFirstUpdate = true;
 			window.minSize = window.WindowSize;
 			window.maxSize = window.WindowSize;
 			window.position = new Rect( ( Screen.currentResolution.width - window.minSize.x ) / 2, ( Screen.currentResolution.height - window.minSize.y ) / 2, window.minSize.x, window.minSize.y );
@@ -82,9 +86,9 @@ namespace Ulfred
 
 		private void InitializeLogoStyle()
 		{
-			this.logoStyle = new GUIStyle(EditorStyles.boldLabel);
+			this.logoStyle = new GUIStyle( EditorStyles.boldLabel );
 			this.logoStyle.alignment = TextAnchor.LowerRight;
-			this.logoStyle.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+			this.logoStyle.normal.textColor = new Color( 0.5f, 0.5f, 0.5f, 0.5f );
 			this.logoStyle.fontSize = 128;
 		}
 
@@ -92,7 +96,7 @@ namespace Ulfred
 		{
 			if( this.GetKeyDown( KeyCode.DownArrow ) )
 			{
-				GUIUtility.keyboardControl = 0;
+				GUIUtility.keyboardControl = this.hiddenSearchTextFieldKeyboardControl;
 				if( this.selectIndex >= CurrentData.searchCount - 1 )
 				{
 					this.listIndex++;
@@ -109,7 +113,7 @@ namespace Ulfred
 			}
 			if( this.GetKeyDown( KeyCode.UpArrow ) )
 			{
-				GUIUtility.keyboardControl = 0;
+				GUIUtility.keyboardControl = this.hiddenSearchTextFieldKeyboardControl;
 				if( this.selectIndex <= 0 )
 				{
 					this.listIndex--;
@@ -134,10 +138,6 @@ namespace Ulfred
 					{
 						AssetDatabase.OpenAsset( selectObject );
 					}
-					else
-					{
-						Selection.activeObject = selectObject;
-					}
 				}
 			}
 			if( this.GetKeyDown( KeyCode.Escape ) )
@@ -146,6 +146,7 @@ namespace Ulfred
 			}
 			if( Event.current.character > 0 || Event.current.keyCode == KeyCode.Backspace || Event.current.keyCode == KeyCode.Delete )
 			{
+				GUIUtility.keyboardControl = this.searchTextFieldKeyboardControl;
 				this.selectIndex = 0;
 				this.listIndex = 0;
 			}
@@ -153,7 +154,7 @@ namespace Ulfred
 
 		private void DrawUlfredLogo()
 		{
-			EditorGUI.LabelField(new Rect(0, 0, this.position.width, this.position.height), "Ulfred", this.logoStyle);
+			EditorGUI.LabelField( new Rect( 0, 0, this.position.width, this.position.height ), "Ulfred", this.logoStyle );
 		}
 
 		private void DrawSearchTextField()
@@ -166,10 +167,18 @@ namespace Ulfred
 				SearchAssets();
 			}
 
-			if( this.isFirstUpdate )
+			GUI.SetNextControlName( HiddenSearchTextFieldControlName );
+			EditorGUI.TextField( new Rect( -100, -100, 0, 0 ), "" );
+			if( this.hiddenSearchTextFieldKeyboardControl == -1 )
 			{
-				this.isFirstUpdate = false;
+				EditorGUI.FocusTextInControl( HiddenSearchTextFieldControlName );
+				this.hiddenSearchTextFieldKeyboardControl = GUIUtility.keyboardControl;
+			}
+
+			if( this.searchTextFieldKeyboardControl == -1 )
+			{
 				EditorGUI.FocusTextInControl( SearchTextFieldControlName );
+				this.searchTextFieldKeyboardControl = GUIUtility.keyboardControl;
 			}
 		}
 
@@ -225,8 +234,10 @@ namespace Ulfred
 				return;
 			}
 
+#if CheckPerformance_Search
 			var s = new System.Diagnostics.Stopwatch();
 			s.Start();
+#endif
 			var guids = AssetDatabase.FindAssets( this.search );
 			var notAccessGuids = new List<string>();
 			this.findAssetCounts = new List<AccessCount>();
@@ -248,8 +259,10 @@ namespace Ulfred
 				this.findAssetCounts.Add( new AccessCount( notAccessGuids[i], 0 ) );
 			}
 
+#if CheckPerformance_Search
 			s.Stop();
 			Debug.Log( "Search " + s.ElapsedMilliseconds + "ms" );
+#endif
 		}
 
 		private static void LoadData()
