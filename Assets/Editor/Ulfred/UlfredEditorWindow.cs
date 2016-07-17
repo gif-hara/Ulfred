@@ -59,14 +59,20 @@ namespace Ulfred
 			window.position = new Rect( ( Screen.currentResolution.width - window.minSize.x ) / 2, ( Screen.currentResolution.height - window.minSize.y ) / 2, window.minSize.x, window.minSize.y );
 		}
 
+		void Update()
+		{
+			this.Repaint();
+		}
+
 		void OnLostFocus()
 		{
-			this.Close();
+			//this.Close();
 		}
 
 		void OnGUI()
 		{
 			this.InputEvent();
+			this.DrawUlfredLogo();
 			this.DrawSearchTextField();
 			this.DrawSearchResult();
 		}
@@ -130,6 +136,15 @@ namespace Ulfred
 				this.selectIndex = 0;
 				this.listIndex = 0;
 			}
+		}
+
+		private void DrawUlfredLogo()
+		{
+			var guiStyle = new GUIStyle(EditorStyles.boldLabel);
+			guiStyle.alignment = TextAnchor.LowerRight;
+			guiStyle.normal.textColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+			guiStyle.fontSize = 128;
+			EditorGUI.LabelField(new Rect(0, 0, this.position.width, this.position.height), "Ulfred", guiStyle);
 		}
 
 		private void DrawSearchTextField()
