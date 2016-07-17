@@ -22,7 +22,7 @@ namespace Ulfred
 		{
 			get
 			{
-				if(this.skin == null)
+				if( this.skin == null )
 				{
 					this.skin = AssetDatabase.LoadAssetAtPath<GUISkin>( "Assets/Editor/Ulfred/UlfredGUISkin.guiskin" );
 				}
@@ -30,6 +30,7 @@ namespace Ulfred
 				return this.skin;
 			}
 		}
+
 		private GUISkin skin;
 
 		private Vector2 scrollPosition = Vector2.zero;
@@ -43,6 +44,10 @@ namespace Ulfred
 		private int searchTextFieldKeyboardControl = -1;
 
 		private int hiddenSearchTextFieldKeyboardControl = -1;
+
+		private List<System.Type> assetTypes = null;
+
+		private Event inputEvent = null;
 
 		private const float FindAssetGUIHeight = 82.0f;
 
@@ -97,6 +102,7 @@ namespace Ulfred
 			this.DrawUlfredLogo();
 			this.DrawSearchTextField();
 			this.DrawSearchResult();
+			this.LateInputEvent();
 		}
 
 		private void InitializeLogoStyle()
@@ -109,7 +115,8 @@ namespace Ulfred
 
 		private void InputEvent()
 		{
-			if( this.GetKeyDown( KeyCode.DownArrow ) )
+			this.inputEvent = Event.current;
+			if( this.GetKeyDown( KeyCode.DownArrow, this.inputEvent ) )
 			{
 				GUIUtility.keyboardControl = this.hiddenSearchTextFieldKeyboardControl;
 				if( this.selectIndex >= CurrentData.searchCount - 1 )
@@ -126,7 +133,7 @@ namespace Ulfred
 					this.selectIndex = this.selectIndex > max ? max : this.selectIndex;
 				}
 			}
-			if( this.GetKeyDown( KeyCode.UpArrow ) )
+			if( this.GetKeyDown( KeyCode.UpArrow, this.inputEvent ) )
 			{
 				GUIUtility.keyboardControl = this.hiddenSearchTextFieldKeyboardControl;
 				if( this.selectIndex <= 0 )
@@ -140,7 +147,7 @@ namespace Ulfred
 					this.selectIndex = this.selectIndex < 0 ? 0 : this.selectIndex;
 				}
 			}
-			if( this.GetKeyDown( KeyCode.Return ) )
+			if( this.GetKeyDown( KeyCode.Return, this.inputEvent ) )
 			{
 				if( this.findAssetCounts.Count > 0 )
 				{
@@ -149,7 +156,7 @@ namespace Ulfred
 					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( guid ), typeof( Object ) ) as Object;
 					CurrentData.AddAccessCount( guid );
 					Save();
-					if( Event.current.command )
+					if( this.inputEvent.command )
 					{
 						AssetDatabase.OpenAsset( selectObject );
 					}
@@ -159,15 +166,29 @@ namespace Ulfred
 					}
 				}
 			}
-			if( this.GetKeyDown( KeyCode.Escape ) )
+			if( this.GetKeyDown( KeyCode.Escape, this.inputEvent ) )
 			{
 				this.Close();
 			}
-			if( Event.current.character > 0 || Event.current.keyCode == KeyCode.Backspace || Event.current.keyCode == KeyCode.Delete )
+			if( this.inputEvent.character > 0 || this.inputEvent.keyCode == KeyCode.Backspace || this.inputEvent.keyCode == KeyCode.Delete )
 			{
 				GUIUtility.keyboardControl = this.searchTextFieldKeyboardControl;
 				this.selectIndex = 0;
 				this.listIndex = 0;
+			}
+				
+		}
+
+		private void LateInputEvent()
+		{
+			string a = new string( new char[]{ Event.current.character });
+			if(a == ":" && Event.current.type == EventType.KeyDown)
+			{
+				Debug.Log("search = " + this.search);
+				if(this.search.IndexOf("t:") >= 0)
+				{
+					Debug.Log("Start Type Search");
+				}
 			}
 		}
 
@@ -310,14 +331,14 @@ namespace Ulfred
 			UnityEditorInternal.InternalEditorUtility.SaveToSerializedFileAndForget( new UnityEngine.Object[]{ CurrentData }, FileDirectory + FileName, true );
 		}
 
-		private bool GetKeyDown( KeyCode keyCode )
+		private bool GetKeyDown( KeyCode keyCode, Event currentEvent )
 		{
-			if( Event.current.type != EventType.KeyDown )
+			if( currentEvent.type != EventType.KeyDown )
 			{
 				return false;
 			}
 
-			return Event.current.keyCode == keyCode;
+			return currentEvent.keyCode == keyCode;
 		}
 
 		private Vector2 IconSize
