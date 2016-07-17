@@ -138,6 +138,10 @@ namespace Ulfred
 					{
 						AssetDatabase.OpenAsset( selectObject );
 					}
+					else
+					{
+						Selection.activeObject = selectObject;
+					}
 				}
 			}
 			if( this.GetKeyDown( KeyCode.Escape ) )
