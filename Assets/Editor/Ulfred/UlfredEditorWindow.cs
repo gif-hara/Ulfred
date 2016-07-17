@@ -1,4 +1,6 @@
 ﻿//#define CheckPerformance_Search
+#define UpdateRepaint
+
 using UnityEngine;
 using UnityEngine.Assertions;
 using System.Collections.Generic;
@@ -16,6 +18,18 @@ namespace Ulfred
 
 		private List<AccessCount> findAssetCounts = new List<AccessCount>();
 
+		public GUISkin Skin
+		{
+			get
+			{
+				if(this.skin == null)
+				{
+					this.skin = AssetDatabase.LoadAssetAtPath<GUISkin>( "Assets/Editor/Ulfred/UlfredGUISkin.guiskin" );
+				}
+
+				return this.skin;
+			}
+		}
 		private GUISkin skin;
 
 		private Vector2 scrollPosition = Vector2.zero;
@@ -59,21 +73,22 @@ namespace Ulfred
 		public static void ShowWindow()
 		{
 			var window = EditorWindow.GetWindow<UlfredEditorWindow>( true, "Ulfred", true );
-			window.skin = AssetDatabase.LoadAssetAtPath<GUISkin>( "Assets/Editor/Ulfred/UlfredGUISkin.guiskin" );
 			window.minSize = window.WindowSize;
 			window.maxSize = window.WindowSize;
 			window.position = new Rect( ( Screen.currentResolution.width - window.minSize.x ) / 2, ( Screen.currentResolution.height - window.minSize.y ) / 2, window.minSize.x, window.minSize.y );
 			window.InitializeLogoStyle();
 		}
 
+#if UpdateRepaint
 		void Update()
 		{
 			this.Repaint();
 		}
+#endif
 
 		void OnLostFocus()
 		{
-			//this.Close();
+			this.Close();
 		}
 
 		void OnGUI()
@@ -309,7 +324,7 @@ namespace Ulfred
 		{
 			get
 			{
-				return Vector2.one * this.skin.GetStyle( "fileLabelActive" ).fontSize;
+				return Vector2.one * this.Skin.GetStyle( "fileLabelActive" ).fontSize;
 			}
 		}
 
@@ -361,7 +376,7 @@ namespace Ulfred
 		{
 			get
 			{
-				return this.skin.GetStyle( "searchTextField" );
+				return this.Skin.GetStyle( "searchTextField" );
 			}
 		}
 
@@ -382,7 +397,7 @@ namespace Ulfred
 
 		private GUIStyle GetStyle( bool isActive, string activeName, string inactiveName )
 		{
-			return this.skin.GetStyle( isActive ? activeName : inactiveName );
+			return this.Skin.GetStyle( isActive ? activeName : inactiveName );
 		}
 
 		private Vector2 WindowSize
