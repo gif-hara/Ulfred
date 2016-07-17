@@ -2,6 +2,7 @@
 using UnityEngine.Assertions;
 using System.Collections.Generic;
 using UnityEditor;
+using System.IO;
 
 namespace IconWindow
 {
@@ -13,6 +14,10 @@ namespace IconWindow
 		private List<UnityEngine.Object> _objects;
 
 		private Vector2 scrollPosition = new Vector2();
+
+		private const string FileDirectory = "IconWindow";
+
+		private const string FileName = "/data.dat";
 
 		[MenuItem( "Window/IconWindow" )] 
 		public static void ShowWindow()
@@ -26,14 +31,21 @@ namespace IconWindow
 			{
 				_objects = new List<UnityEngine.Object>( Resources.FindObjectsOfTypeAll( typeof( Texture2D ) ) );
 				_objects.Sort( ( pA, pB ) => System.String.Compare( pA.name, pB.name, System.StringComparison.OrdinalIgnoreCase ) );
-				//EditorUtility.
+				Save();
 			}
-			this.scrollPosition = EditorGUILayout.BeginScrollView(this.scrollPosition);
-			foreach(var o in _objects)
+			this.scrollPosition = EditorGUILayout.BeginScrollView( this.scrollPosition );
+			foreach( var o in _objects )
 			{
-				EditorGUILayout.ObjectField(o, typeof(Texture2D));
+				EditorGUILayout.LabelField( new GUIContent( o.name, o as Texture2D ) );
 			}
 			EditorGUILayout.EndScrollView();
+		}
+
+		private void Save()
+		{
+			Directory.CreateDirectory( FileDirectory );
+			File.Delete( FileDirectory + FileName );
+			UnityEditorInternal.InternalEditorUtility.SaveToSerializedFileAndForget( new UnityEngine.Object[]{ new Data( _objects ) }, FileDirectory + FileName, true );
 		}
 
 	}

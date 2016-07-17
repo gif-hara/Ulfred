@@ -19,8 +19,10 @@ MonoBehaviour:
   - guid: 673d6073ee233c4409b55f42932ea483
     count: 1
   - guid: dba54505a4854c741ad3f93af518e6cc
-    count: 2
+    count: 3
   - guid: b448bfba9354407468c315b042bd6f8c
     count: 3
   - guid: effec3f95f71a4901bfba92e9d181108
+    count: 1
+  - guid: aa66c557bf7a94843b699d2bbd9b19f2
     count: 1
