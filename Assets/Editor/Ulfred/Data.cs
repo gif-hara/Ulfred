@@ -27,6 +27,8 @@ namespace Ulfred
 
 		public int searchCount = 5;
 
+		public string shortCutKeyCode = "&u";
+
 		public int fileLabelMargin = 16;
 
 		public int pathLabelMargin = 8;
@@ -38,6 +40,20 @@ namespace Ulfred
 		private const string FileDirectory = "Ulfred";
 
 		private const string FileName = "/data.dat";
+
+		public void Copy(Data other)
+		{
+			this.searchCount = other.searchCount;
+			this.shortCutKeyCode = other.shortCutKeyCode;
+		}
+
+		public Data Clone()
+		{
+			var result = ScriptableObject.CreateInstance<Data>();
+			result.Copy(this);
+
+			return result;
+		}
 
 		public void AddAccessCount( string guid )
 		{

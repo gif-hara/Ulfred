@@ -89,7 +89,7 @@ namespace Ulfred
 
 		private static void ResidentUpdate()
 		{
-			if( Event.current.Equals( Event.KeyboardEvent( "&u" ) ) )
+			if( Event.current.Equals( Event.KeyboardEvent( Data.Instance.shortCutKeyCode ) ) )
 			{
 				ShowWindow();
 			}
