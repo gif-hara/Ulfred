@@ -11,6 +11,7 @@ namespace Ulfred
 
 		private bool editShortCutKey = false;
 
+		[MenuItem( "Window/Ulfred Option" )]
 		public static void ShowWindow()
 		{
 			var window = EditorWindow.GetWindow<UlfredOptionWindow>( true, "Ulfred Option", true );
