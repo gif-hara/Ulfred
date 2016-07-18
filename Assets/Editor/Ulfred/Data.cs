@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.Assertions;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Ulfred
 {
@@ -10,6 +11,20 @@ namespace Ulfred
 	[System.Serializable]
 	public class Data : ScriptableObject
 	{
+		public static Data Instance
+		{
+			get
+			{
+				if( instance == null )
+				{
+					LoadData();
+				}
+
+				return instance;
+			}
+		}
+		private static Data instance = null;
+
 		public int searchCount = 5;
 
 		public int fileLabelMargin = 16;
@@ -19,6 +34,10 @@ namespace Ulfred
 		public int elementMargin = 40;
 
 		public List<AccessCount> accessCounts = new List<AccessCount>();
+
+		private const string FileDirectory = "Ulfred";
+
+		private const string FileName = "/data.dat";
 
 		public void AddAccessCount( string guid )
 		{
@@ -30,6 +49,33 @@ namespace Ulfred
 			}
 			accessCount.count++;
 		}
+
+		private static void LoadData()
+		{
+			if( instance != null )
+			{
+				return;
+			}
+
+			var loadObject = UnityEditorInternal.InternalEditorUtility.LoadSerializedFileAndForget( FileDirectory + FileName );
+			if( loadObject.Length > 0 )
+			{
+				instance = loadObject[0] as Data;
+			}
+			else
+			{
+				instance = ScriptableObject.CreateInstance<Data>();
+				Save();
+			}
+		}
+
+		public static void Save()
+		{
+			Directory.CreateDirectory( FileDirectory );
+			File.Delete( FileDirectory + FileName );
+			UnityEditorInternal.InternalEditorUtility.SaveToSerializedFileAndForget( new UnityEngine.Object[]{ Instance }, FileDirectory + FileName, true );
+		}
+
 	}
 
 	[System.Serializable]
