@@ -6,6 +6,8 @@ using UnityEngine.Assertions;
 using System.Collections.Generic;
 using UnityEditor;
 using System.IO;
+using System.Reflection;
+using CallbackFunction = UnityEditor.EditorApplication.CallbackFunction;
 
 namespace Ulfred
 {
@@ -33,8 +35,6 @@ namespace Ulfred
 
 		private GUISkin skin;
 
-		private Vector2 scrollPosition = Vector2.zero;
-
 		private int listIndex = 0;
 
 		private int selectIndex = 0;
@@ -44,10 +44,6 @@ namespace Ulfred
 		private int searchTextFieldKeyboardControl = -1;
 
 		private int hiddenSearchTextFieldKeyboardControl = -1;
-
-		private List<System.Type> assetTypes = null;
-
-		private Event inputEvent = null;
 
 		private const float FindAssetGUIHeight = 82.0f;
 
@@ -74,7 +70,7 @@ namespace Ulfred
 
 		private static Data data = null;
 
-		[MenuItem( "Window/Ulfred &u" )]
+		[MenuItem( "Window/Ulfred" )]
 		public static void ShowWindow()
 		{
 			var window = EditorWindow.GetWindow<UlfredEditorWindow>( true, "Ulfred", true );
@@ -99,10 +95,26 @@ namespace Ulfred
 		void OnGUI()
 		{
 			this.InputEvent();
+			this.DrawOptionButton();
 			this.DrawUlfredLogo();
 			this.DrawSearchTextField();
 			this.DrawSearchResult();
-			this.LateInputEvent();
+			this.DrawOptionImage();
+		}
+
+		[InitializeOnLoadMethod()]
+		private static void InitializeOnLoad()
+		{
+			EditorApplicationUtility.globalEventHandler -= ResidentUpdate;
+			EditorApplicationUtility.globalEventHandler += ResidentUpdate;
+		}
+
+		private static void ResidentUpdate()
+		{
+			if( Event.current.Equals( Event.KeyboardEvent( "&u" ) ) )
+			{
+				ShowWindow();
+			}
 		}
 
 		private void InitializeLogoStyle()
@@ -115,8 +127,8 @@ namespace Ulfred
 
 		private void InputEvent()
 		{
-			this.inputEvent = Event.current;
-			if( this.GetKeyDown( KeyCode.DownArrow, this.inputEvent ) )
+			var currentEvent = Event.current;
+			if( this.GetKeyDown( KeyCode.DownArrow, currentEvent ) )
 			{
 				GUIUtility.keyboardControl = this.hiddenSearchTextFieldKeyboardControl;
 				if( this.selectIndex >= CurrentData.searchCount - 1 )
@@ -133,7 +145,7 @@ namespace Ulfred
 					this.selectIndex = this.selectIndex > max ? max : this.selectIndex;
 				}
 			}
-			if( this.GetKeyDown( KeyCode.UpArrow, this.inputEvent ) )
+			if( this.GetKeyDown( KeyCode.UpArrow, currentEvent ) )
 			{
 				GUIUtility.keyboardControl = this.hiddenSearchTextFieldKeyboardControl;
 				if( this.selectIndex <= 0 )
@@ -147,7 +159,7 @@ namespace Ulfred
 					this.selectIndex = this.selectIndex < 0 ? 0 : this.selectIndex;
 				}
 			}
-			if( this.GetKeyDown( KeyCode.Return, this.inputEvent ) )
+			if( this.GetKeyDown( KeyCode.Return, currentEvent ) )
 			{
 				if( this.findAssetCounts.Count > 0 )
 				{
@@ -166,30 +178,17 @@ namespace Ulfred
 					}
 				}
 			}
-			if( this.GetKeyDown( KeyCode.Escape, this.inputEvent ) )
+			if( this.GetKeyDown( KeyCode.Escape, currentEvent ) )
 			{
 				this.Close();
 			}
-			if( this.inputEvent.character > 0 || this.inputEvent.keyCode == KeyCode.Backspace || this.inputEvent.keyCode == KeyCode.Delete )
+			if( currentEvent.character > 0 || currentEvent.keyCode == KeyCode.Backspace || currentEvent.keyCode == KeyCode.Delete )
 			{
 				GUIUtility.keyboardControl = this.searchTextFieldKeyboardControl;
 				this.selectIndex = 0;
 				this.listIndex = 0;
 			}
 				
-		}
-
-		private void LateInputEvent()
-		{
-			string a = new string( new char[]{ Event.current.character });
-			if(a == ":" && Event.current.type == EventType.KeyDown)
-			{
-				Debug.Log("search = " + this.search);
-				if(this.search.IndexOf("t:") >= 0)
-				{
-					Debug.Log("Start Type Search");
-				}
-			}
 		}
 
 		private void DrawUlfredLogo()
@@ -251,6 +250,20 @@ namespace Ulfred
 			GUI.BeginScrollView( this.FindAssetViewRect, new Vector2( 0.0f, scrollY ), findAssetTableRect );
 			GUI.EndScrollView();
 			EditorGUIUtility.SetIconSize( iconSize );
+		}
+
+		private void DrawOptionButton()
+		{
+			if(GUI.Button( this.OptionButtonRect, "", this.Skin.GetStyle( "option" ) ))
+			{
+				Debug.Log("OK");
+			}
+		}
+
+		private void DrawOptionImage()
+		{
+			// 検索フォームの手前にボタンを描画するとボタンが反応しないためダミーでテクスチャーを表示させる.
+			GUI.DrawTexture( this.OptionButtonRect, this.Skin.GetStyle( "option" ).normal.background );
 		}
 
 		private GUIContent GetGUIContent( UnityEngine.Object obj )
@@ -393,6 +406,14 @@ namespace Ulfred
 			);
 		}
 
+		private Rect OptionButtonRect
+		{
+			get
+			{
+				return new Rect( this.position.width - 19, 4, 16, 16 );
+			}
+		}
+
 		private GUIStyle SearchTextFieldStyle
 		{
 			get
@@ -446,6 +467,30 @@ namespace Ulfred
 				result = result < 0 ? 0 : result;
 
 				return result;
+			}
+		}
+	}
+
+	[InitializeOnLoad]
+	class EditorApplicationUtility
+	{
+		static BindingFlags flags =
+			BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic;
+
+		static FieldInfo info = typeof( EditorApplication )
+			.GetField( "globalEventHandler", flags );
+
+		public static CallbackFunction globalEventHandler
+		{
+			get
+			{
+				return  (CallbackFunction)info.GetValue( null );
+			}
+			set
+			{
+				CallbackFunction functions = (CallbackFunction)info.GetValue( null );
+				functions += value;
+				info.SetValue( null, (object)functions );
 			}
 		}
 	}
