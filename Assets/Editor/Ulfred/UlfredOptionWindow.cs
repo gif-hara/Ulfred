@@ -35,6 +35,18 @@ namespace Ulfred
 			{
 				var result = "";
 				string s = new string( new char[]{ Event.current.character } );
+				if( this.editData.isAlt )
+				{
+					result += "&";
+				}
+				if( this.editData.isControl )
+				{
+					result += "%";
+				}
+				if( this.editData.isShift )
+				{
+					result += "#";
+				}
 				result += s.ToLower();
 				this.editData.shortCutKeyCode = result;
 				this.editShortCutKey = false;
@@ -49,7 +61,7 @@ namespace Ulfred
 
 		private void DrawShortCutKey()
 		{
-			EditorGUILayout.PrefixLabel("Shortcut Key");
+			EditorGUILayout.PrefixLabel( "Shortcut Key" );
 			GUILayout.BeginHorizontal();
 			if( GUILayout.Button( "Bind ShortCut Key", GUILayout.Width( this.position.width / 2 ) ) )
 			{
@@ -65,18 +77,17 @@ namespace Ulfred
 			}
 			GUILayout.EndHorizontal();
 
-			GUILayout.BeginHorizontal(GUILayout.Width( this.position.width / 2 ));
-			this.DrawShortCutKeyModifierToggle("&", "alt");
-			this.DrawShortCutKeyModifierToggle("%", "ctrl");
-			this.DrawShortCutKeyModifierToggle("#", "shift");
+			GUILayout.BeginHorizontal( GUILayout.Width( this.position.width / 2 ) );
+			this.editData.isAlt = this.DrawShortCutKeyModifierToggle( this.editData.isAlt, "&", "alt" );
+			this.editData.isControl = this.DrawShortCutKeyModifierToggle( this.editData.isControl, "%", "ctrl" );
+			this.editData.isShift = this.DrawShortCutKeyModifierToggle( this.editData.isShift, "#", "shift" );
 			GUILayout.EndHorizontal();
 		}
 
-		private void DrawShortCutKeyModifierToggle(string modifierCode, string label)
+		private bool DrawShortCutKeyModifierToggle( bool modifierKey, string modifierCode, string label )
 		{
-			var isModifier = this.editData.shortCutKeyCode.IndexOf( modifierCode ) >= 0;
-			var newModifier = GUILayout.Toggle( isModifier, label );
-			if( isModifier != newModifier )
+			var newModifier = GUILayout.Toggle( modifierKey, label );
+			if( modifierKey != newModifier )
 			{
 				if( newModifier )
 				{
@@ -86,10 +97,12 @@ namespace Ulfred
 				{
 					var splitString = this.editData.shortCutKeyCode.Split( new string[] { modifierCode }, System.StringSplitOptions.RemoveEmptyEntries );
 					var fixedCode = "";
-					System.Array.ForEach(splitString, s => fixedCode += s);
+					System.Array.ForEach( splitString, s => fixedCode += s );
 					this.editData.shortCutKeyCode = fixedCode;
 				}
 			}
+
+			return newModifier;
 		}
 
 		private void DrawSystemButton()

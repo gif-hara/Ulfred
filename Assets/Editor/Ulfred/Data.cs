@@ -23,11 +23,18 @@ namespace Ulfred
 				return instance;
 			}
 		}
+
 		private static Data instance = null;
 
 		public int searchCount = 5;
 
 		public string shortCutKeyCode = "&u";
+
+		public bool isAlt = true;
+
+		public bool isControl = false;
+
+		public bool isShift = false;
 
 		public int fileLabelMargin = 16;
 
@@ -41,16 +48,19 @@ namespace Ulfred
 
 		private const string FileName = "/data.dat";
 
-		public void Copy(Data other)
+		public void Copy( Data other )
 		{
 			this.searchCount = other.searchCount;
 			this.shortCutKeyCode = other.shortCutKeyCode;
+			this.isAlt = other.isAlt;
+			this.isControl = other.isControl;
+			this.isShift = other.isShift;
 		}
 
 		public Data Clone()
 		{
 			var result = ScriptableObject.CreateInstance<Data>();
-			result.Copy(this);
+			result.Copy( this );
 
 			return result;
 		}
