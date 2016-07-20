@@ -22,7 +22,7 @@ namespace IconWindow
 		[MenuItem( "Window/IconWindow" )] 
 		public static void ShowWindow()
 		{
-			var w = EditorWindow.GetWindow<IconsWindow>();
+			EditorWindow.GetWindow<IconsWindow>();
 		}
 
 		void OnGUI()
