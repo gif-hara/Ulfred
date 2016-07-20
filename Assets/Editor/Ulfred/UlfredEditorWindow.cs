@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using System.IO;
 using System.Reflection;
+using System.Linq;
 using CallbackFunction = UnityEditor.EditorApplication.CallbackFunction;
 
 namespace Ulfred
@@ -16,6 +17,8 @@ namespace Ulfred
 		private string search = "";
 
 		private List<AccessCount> findAssetCounts = new List<AccessCount>();
+
+		private List<MethodInfo> findCommands = new List<MethodInfo>();
 
 		public GUISkin Skin
 		{
@@ -42,7 +45,7 @@ namespace Ulfred
 
 		private int hiddenSearchTextFieldKeyboardControl = -1;
 
-		private const float FindAssetGUIHeight = 20.0f;
+		private static Dictionary<string, MethodInfo> commands;
 
 		private const string SearchTextFieldControlName = "SearchTextField";
 
@@ -76,13 +79,22 @@ namespace Ulfred
 			this.DrawOptionButton();
 			this.DrawUlfredLogo();
 			this.DrawSearchTextField();
-			this.DrawSearchResult();
+			if( this.IsCommandMode )
+			{
+				this.DrawSearchResultCommands();
+			}
+			else
+			{
+				this.DrawSearchResultAssets();
+			}
 			this.DrawOptionImage();
 		}
 
 		[InitializeOnLoadMethod()]
 		private static void InitializeOnLoad()
 		{
+			commands = typeof( UlfredCommand ).GetMethods().Where( m => m.IsStatic ).ToDictionary( m => m.Name.ToLower() );
+
 			EditorApplicationUtility.globalEventHandler -= ResidentUpdate;
 			EditorApplicationUtility.globalEventHandler += ResidentUpdate;
 		}
@@ -139,6 +151,14 @@ namespace Ulfred
 			}
 			if( this.GetKeyDown( KeyCode.Return, currentEvent ) )
 			{
+				if(this.IsCommandMode)
+				{
+					if(this.findCommands.Count > 0)
+					{
+						this.Close();
+						this.findCommands[this.listIndex + this.selectIndex].Invoke(null, null);
+					}
+				}
 				if( this.findAssetCounts.Count > 0 )
 				{
 					this.Close();
@@ -166,7 +186,6 @@ namespace Ulfred
 				this.selectIndex = 0;
 				this.listIndex = 0;
 			}
-				
 		}
 
 		private void DrawUlfredLogo()
@@ -181,7 +200,14 @@ namespace Ulfred
 			this.search = EditorGUI.TextField( this.SearchTextFieldRect, this.search, this.SearchTextFieldStyle );
 			if( EditorGUI.EndChangeCheck() )
 			{
-				SearchAssets();
+				if( this.IsCommandMode )
+				{
+					this.SearchCommands();
+				}
+				else
+				{
+					this.SearchAssets();
+				}
 			}
 
 			GUI.SetNextControlName( HiddenSearchTextFieldControlName );
@@ -199,7 +225,7 @@ namespace Ulfred
 			}
 		}
 
-		private void DrawSearchResult()
+		private void DrawSearchResultAssets()
 		{
 			int imax = this.findAssetCounts.Count > Data.Instance.searchCount ? Data.Instance.searchCount : this.findAssetCounts.Count;
 			var iconSize = EditorGUIUtility.GetIconSize();
@@ -207,27 +233,23 @@ namespace Ulfred
 
 			for( int i = 0; i < imax; i++ )
 			{
-				var isActive = i == this.selectIndex;
 				var path = AssetDatabase.GUIDToAssetPath( this.findAssetCounts[this.listIndex + i].guid );
 				var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
-
-				var rect = this.GetFindAssetRect( i, isActive );
-				GUI.Box( rect, GUIContent.none, this.ElementBackgroundStyle( isActive ) );
-
-				var guiStyle = this.FileLabelStyle( isActive );
-				rect = new Rect( rect.x, rect.y + Data.Instance.fileLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
-				GUI.Label( rect, GetGUIContent( obj ), guiStyle );
-
-				guiStyle = this.PathLabelStyle( isActive );
-				rect = new Rect( rect.x, rect.y + rect.height + Data.Instance.pathLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
-				GUI.Label( rect, path, guiStyle );
+				this.DrawElement( i, i == this.selectIndex, this.GetGUIContent( obj ), new GUIContent( path ) );
 			}
 
-			var findAssetTableRect = this.FindAssetTableRect;
-			var scrollY = findAssetTableRect.height * ( (float)this.listIndex / (this.findAssetCounts.Count - 1) );
-			GUI.BeginScrollView( this.FindAssetViewRect, new Vector2( 0.0f, scrollY ), findAssetTableRect );
-			GUI.EndScrollView();
+			this.DrawScrollbar();
 			EditorGUIUtility.SetIconSize( iconSize );
+		}
+
+		private void DrawSearchResultCommands()
+		{
+			int imax = this.findCommands.Count > Data.Instance.searchCount ? Data.Instance.searchCount : this.findCommands.Count;
+			for( int i = 0; i < imax; i++ )
+			{
+				this.DrawElement( i, i == this.selectIndex, new GUIContent( this.findCommands[this.listIndex + i].Name, this.Skin.GetStyle( "option" ).normal.background ), GUIContent.none );
+			}
+			this.DrawScrollbar();
 		}
 
 		private void DrawOptionButton()
@@ -243,6 +265,28 @@ namespace Ulfred
 		{
 			// 検索フォームの手前にボタンを描画するとボタンが反応しないためダミーでテクスチャーを表示させる.
 			GUI.DrawTexture( this.OptionButtonRect, this.Skin.GetStyle( "option" ).normal.background );
+		}
+
+		private void DrawElement( int index, bool isActive, GUIContent fileLabel, GUIContent pathLabel )
+		{
+			var rect = this.GetFindAssetRect( index, isActive );
+			GUI.Box( rect, GUIContent.none, this.ElementBackgroundStyle( isActive ) );
+
+			var guiStyle = this.FileLabelStyle( isActive );
+			rect = new Rect( rect.x, rect.y + Data.Instance.fileLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
+			GUI.Label( rect, fileLabel, guiStyle );
+
+			guiStyle = this.PathLabelStyle( isActive );
+			rect = new Rect( rect.x, rect.y + rect.height + Data.Instance.pathLabelMargin, rect.width, guiStyle.CalcHeight( GUIContent.none, rect.width ) );
+			GUI.Label( rect, pathLabel, guiStyle );
+		}
+
+		private void DrawScrollbar()
+		{
+			var findAssetTableRect = this.FindAssetTableRect;
+			var scrollY = findAssetTableRect.height * ( (float)this.listIndex / ( this.findAssetCounts.Count - 1 ) );
+			GUI.BeginScrollView( this.FindAssetViewRect, new Vector2( 0.0f, scrollY ), findAssetTableRect );
+			GUI.EndScrollView();
 		}
 
 		private GUIContent GetGUIContent( UnityEngine.Object obj )
@@ -297,6 +341,20 @@ namespace Ulfred
 #endif
 		}
 
+		private void SearchCommands()
+		{
+#if CheckPerformance_Search
+			var s = new System.Diagnostics.Stopwatch();
+			s.Start();
+#endif
+			var fixedSearch = this.search.Substring(this.search.IndexOf(">") + 1);
+			this.findCommands = commands.Where( c => c.Key.IndexOf( fixedSearch ) >= 0 ).Select( c => c.Value ).ToList();
+#if CheckPerformance_Search
+			s.Stop();
+			Debug.Log( "Search " + s.ElapsedMilliseconds + "ms" );
+#endif
+		}
+
 
 		private bool GetKeyDown( KeyCode keyCode, Event currentEvent )
 		{
@@ -306,6 +364,14 @@ namespace Ulfred
 			}
 
 			return currentEvent.keyCode == keyCode;
+		}
+
+		private bool IsCommandMode
+		{
+			get
+			{
+				return this.search.IndexOf( ">" ) == 0;
+			}
 		}
 
 		private Vector2 IconSize
