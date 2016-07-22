@@ -2,6 +2,8 @@
 using UnityEngine.Assertions;
 using System.Collections.Generic;
 using System.IO;
+using System;
+using System.Reflection;
 
 namespace Ulfred
 {
@@ -42,7 +44,9 @@ namespace Ulfred
 
 		public int elementMargin = 40;
 
-		public List<AccessCount> accessCounts = new List<AccessCount>();
+		public List<AssetAccessCount> assetAccessCounts = new List<AssetAccessCount>();
+
+		public List<CommandAccessCount> commandAccessCounts = new List<CommandAccessCount>();
 
 		private const string FileDirectory = "Ulfred";
 
@@ -67,11 +71,11 @@ namespace Ulfred
 
 		public void AddAccessCount( string guid )
 		{
-			var accessCount = this.accessCounts.Find( a => a.guid == guid );
+			var accessCount = this.assetAccessCounts.Find( a => a.guid == guid );
 			if( accessCount == null )
 			{
-				accessCount = new AccessCount( guid, 0 );
-				this.accessCounts.Add( accessCount );
+				accessCount = new AssetAccessCount( guid, 0 );
+				this.assetAccessCounts.Add( accessCount );
 			}
 			accessCount.count++;
 		}
@@ -105,16 +109,44 @@ namespace Ulfred
 	}
 
 	[System.Serializable]
-	public class AccessCount
+	public class AssetAccessCount
 	{
 		public string guid;
 
 		public int count;
 
-		public AccessCount( string guid, int count )
+		public AssetAccessCount( string guid, int count )
 		{
 			this.guid = guid;
 			this.count = count;
+		}
+	}
+
+	[System.Serializable]
+	public class CommandAccessCount
+	{
+		public Command command;
+
+		public int count;
+
+		public CommandAccessCount( Command command, int count )
+		{
+			this.command = command;
+			this.count = count;
+		}
+	}
+
+	[System.Serializable]
+	public class Command
+	{
+		public MethodInfo methodInfo;
+
+		public UlfredCommandMethodAttribute attribute;
+
+		public Command( MethodInfo methodInfo )
+		{
+			this.methodInfo = methodInfo;
+			this.attribute = Attribute.GetCustomAttribute( this.methodInfo, typeof( UlfredCommandMethodAttribute ) ) as UlfredCommandMethodAttribute;
 		}
 	}
 }

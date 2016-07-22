@@ -1,5 +1,6 @@
 ﻿//#define CheckPerformance_Search
 #define UpdateRepaint
+//#define OnLostFocusClose
 
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -16,9 +17,9 @@ namespace Ulfred
 	{
 		private string search = "";
 
-		private List<AccessCount> findAssetCounts = new List<AccessCount>();
+		private List<AssetAccessCount> findAssetAccessCounts = new List<AssetAccessCount>();
 
-		private List<MethodInfo> findCommands = new List<MethodInfo>();
+		private List<CommandAccessCount> findCommandAccessCounts = new List<CommandAccessCount>();
 
 		public GUISkin Skin
 		{
@@ -45,7 +46,7 @@ namespace Ulfred
 
 		private int hiddenSearchTextFieldKeyboardControl = -1;
 
-		private static Dictionary<string, MethodInfo> commands;
+		private static Dictionary<string, Command> commands;
 
 		private const string SearchTextFieldControlName = "SearchTextField";
 
@@ -70,7 +71,9 @@ namespace Ulfred
 
 		void OnLostFocus()
 		{
+#if OnLostFocusClose
 			this.Close();
+#endif
 		}
 
 		void OnGUI()
@@ -93,7 +96,10 @@ namespace Ulfred
 		[InitializeOnLoadMethod()]
 		private static void InitializeOnLoad()
 		{
-			commands = typeof( UlfredCommand ).GetMethods().Where( m => m.IsStatic ).ToDictionary( m => m.Name.ToLower() );
+			commands = 
+				typeof( UlfredCommand ).GetMethods()
+					.Where( m => m.IsStatic && System.Attribute.GetCustomAttribute( m, typeof( UlfredCommandMethodAttribute ) ) != null )
+					.ToDictionary( m => m.Name.ToLower(), m => new Command( m ) );
 
 			EditorApplicationUtility.globalEventHandler -= ResidentUpdate;
 			EditorApplicationUtility.globalEventHandler += ResidentUpdate;
@@ -131,7 +137,7 @@ namespace Ulfred
 				{
 					this.selectIndex++;
 					var max = Data.Instance.searchCount - 1;
-					max = max > this.findAssetCounts.Count - 1 ? this.findAssetCounts.Count - 1 : max;
+					max = max > this.findAssetAccessCounts.Count - 1 ? this.findAssetAccessCounts.Count - 1 : max;
 					this.selectIndex = this.selectIndex > max ? max : this.selectIndex;
 				}
 			}
@@ -151,18 +157,18 @@ namespace Ulfred
 			}
 			if( this.GetKeyDown( KeyCode.Return, currentEvent ) )
 			{
-				if(this.IsCommandMode)
+				if( this.IsCommandMode )
 				{
-					if(this.findCommands.Count > 0)
+					if( this.findCommandAccessCounts.Count > 0 )
 					{
 						this.Close();
-						this.findCommands[this.listIndex + this.selectIndex].Invoke(null, null);
+						this.findCommandAccessCounts[this.listIndex + this.selectIndex].command.methodInfo.Invoke( null, null );
 					}
 				}
-				if( this.findAssetCounts.Count > 0 )
+				if( this.findAssetAccessCounts.Count > 0 )
 				{
 					this.Close();
-					var guid = this.findAssetCounts[this.listIndex + this.selectIndex].guid;
+					var guid = this.findAssetAccessCounts[this.listIndex + this.selectIndex].guid;
 					var selectObject = AssetDatabase.LoadAssetAtPath( AssetDatabase.GUIDToAssetPath( guid ), typeof( Object ) ) as Object;
 					Data.Instance.AddAccessCount( guid );
 					Data.Save();
@@ -182,7 +188,7 @@ namespace Ulfred
 			}
 			if( currentEvent.character > 0 || currentEvent.keyCode == KeyCode.Backspace || currentEvent.keyCode == KeyCode.Delete )
 			{
-				GUIUtility.keyboardControl = this.searchTextFieldKeyboardControl;
+				//GUIUtility.keyboardControl = this.searchTextFieldKeyboardControl;
 				this.selectIndex = 0;
 				this.listIndex = 0;
 			}
@@ -197,9 +203,18 @@ namespace Ulfred
 		{
 			GUI.SetNextControlName( SearchTextFieldControlName );
 			EditorGUI.BeginChangeCheck();
-			this.search = EditorGUI.TextField( this.SearchTextFieldRect, this.search, this.SearchTextFieldStyle );
+			var _search = EditorGUI.TextField( this.SearchTextFieldRect, this.search, this.SearchTextFieldStyle );
 			if( EditorGUI.EndChangeCheck() )
 			{
+				if( _search.IndexOf( " " ) == 0 && !this.IsCommandMode )
+				{
+					this.search = ">";
+				}
+				else
+				{
+					this.search = _search;
+				}
+
 				if( this.IsCommandMode )
 				{
 					this.SearchCommands();
@@ -209,6 +224,7 @@ namespace Ulfred
 					this.SearchAssets();
 				}
 			}
+			EditorGUI.LabelField( this.SearchTextFieldRect, this.search, this.Skin.GetStyle( "searchLabel" ) );
 
 			GUI.SetNextControlName( HiddenSearchTextFieldControlName );
 			EditorGUI.TextField( new Rect( -100, -100, 0, 0 ), "" );
@@ -227,13 +243,13 @@ namespace Ulfred
 
 		private void DrawSearchResultAssets()
 		{
-			int imax = this.findAssetCounts.Count > Data.Instance.searchCount ? Data.Instance.searchCount : this.findAssetCounts.Count;
+			int imax = this.findAssetAccessCounts.Count > Data.Instance.searchCount ? Data.Instance.searchCount : this.findAssetAccessCounts.Count;
 			var iconSize = EditorGUIUtility.GetIconSize();
 			EditorGUIUtility.SetIconSize( this.IconSize );
 
 			for( int i = 0; i < imax; i++ )
 			{
-				var path = AssetDatabase.GUIDToAssetPath( this.findAssetCounts[this.listIndex + i].guid );
+				var path = AssetDatabase.GUIDToAssetPath( this.findAssetAccessCounts[this.listIndex + i].guid );
 				var obj = AssetDatabase.LoadAssetAtPath( path, typeof( Object ) );
 				this.DrawElement( i, i == this.selectIndex, this.GetGUIContent( obj ), new GUIContent( path ) );
 			}
@@ -244,10 +260,11 @@ namespace Ulfred
 
 		private void DrawSearchResultCommands()
 		{
-			int imax = this.findCommands.Count > Data.Instance.searchCount ? Data.Instance.searchCount : this.findCommands.Count;
+			int imax = this.findCommandAccessCounts.Count > Data.Instance.searchCount ? Data.Instance.searchCount : this.findCommandAccessCounts.Count;
 			for( int i = 0; i < imax; i++ )
 			{
-				this.DrawElement( i, i == this.selectIndex, new GUIContent( this.findCommands[this.listIndex + i].Name, this.Skin.GetStyle( "option" ).normal.background ), GUIContent.none );
+				var commandAccessCount = this.findCommandAccessCounts[this.listIndex + i];
+				this.DrawElement( i, i == this.selectIndex, new GUIContent( commandAccessCount.command.methodInfo.Name, this.Skin.GetStyle( "option" ).normal.background ), new GUIContent( commandAccessCount.command.attribute.description ) );
 			}
 			this.DrawScrollbar();
 		}
@@ -284,7 +301,7 @@ namespace Ulfred
 		private void DrawScrollbar()
 		{
 			var findAssetTableRect = this.FindAssetTableRect;
-			var scrollY = findAssetTableRect.height * ( (float)this.listIndex / ( this.findAssetCounts.Count - 1 ) );
+			var scrollY = findAssetTableRect.height * ( (float)this.listIndex / ( this.findAssetAccessCounts.Count - 1 ) );
 			GUI.BeginScrollView( this.FindAssetViewRect, new Vector2( 0.0f, scrollY ), findAssetTableRect );
 			GUI.EndScrollView();
 		}
@@ -306,7 +323,7 @@ namespace Ulfred
 		{
 			if( string.IsNullOrEmpty( this.search ) )
 			{
-				this.findAssetCounts = new List<AccessCount>();
+				this.findAssetAccessCounts = new List<AssetAccessCount>();
 				return;
 			}
 
@@ -316,23 +333,23 @@ namespace Ulfred
 #endif
 			var guids = AssetDatabase.FindAssets( this.search );
 			var notAccessGuids = new List<string>();
-			this.findAssetCounts = new List<AccessCount>();
+			this.findAssetAccessCounts = new List<AssetAccessCount>();
 			for( var i = 0; i < guids.Length; i++ )
 			{
-				var accessCount = Data.Instance.accessCounts.Find( a => a.guid == guids[i] );
+				var accessCount = Data.Instance.assetAccessCounts.Find( a => a.guid == guids[i] );
 				if( accessCount != null )
 				{
-					this.findAssetCounts.Add( accessCount );
+					this.findAssetAccessCounts.Add( accessCount );
 				}
 				else
 				{
 					notAccessGuids.Add( guids[i] );
 				}
 			}
-			this.findAssetCounts.Sort( ( a, b ) => b.count - a.count );
+			this.findAssetAccessCounts.Sort( ( a, b ) => b.count - a.count );
 			for( var i = 0; i < notAccessGuids.Count; i++ )
 			{
-				this.findAssetCounts.Add( new AccessCount( notAccessGuids[i], 0 ) );
+				this.findAssetAccessCounts.Add( new AssetAccessCount( notAccessGuids[i], 0 ) );
 			}
 
 #if CheckPerformance_Search
@@ -347,8 +364,8 @@ namespace Ulfred
 			var s = new System.Diagnostics.Stopwatch();
 			s.Start();
 #endif
-			var fixedSearch = this.search.Substring(this.search.IndexOf(">") + 1);
-			this.findCommands = commands.Where( c => c.Key.IndexOf( fixedSearch ) >= 0 ).Select( c => c.Value ).ToList();
+			var fixedSearch = this.search.Substring( this.search.IndexOf( ">" ) + 1 );
+			this.findCommandAccessCounts = commands.Where( c => c.Key.IndexOf( fixedSearch ) >= 0 ).Select( c => new CommandAccessCount( c.Value, 0 ) ).ToList();
 #if CheckPerformance_Search
 			s.Stop();
 			Debug.Log( "Search " + s.ElapsedMilliseconds + "ms" );
@@ -405,7 +422,7 @@ namespace Ulfred
 			get
 			{
 				var findAssetViewRect = this.FindAssetViewRect;
-				var heightCount = this.findAssetCounts.Count - 1;
+				var heightCount = this.findAssetAccessCounts.Count - 1;
 				return new Rect( 0.0f, findAssetViewRect.y, 0.0f, heightCount * GetFindAssetHeight( true ) );
 			}
 		}
@@ -488,7 +505,10 @@ namespace Ulfred
 		{
 			get
 			{
-				var result = ( this.findAssetCounts.Count - 1 ) - Data.Instance.searchCount;
+				
+				var result = this.IsCommandMode
+					? ( this.findCommandAccessCounts.Count - 1 ) - Data.Instance.searchCount
+					: ( this.findAssetAccessCounts.Count - 1 ) - Data.Instance.searchCount;
 				result = result < 0 ? 0 : result;
 
 				return result;
