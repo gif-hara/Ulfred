@@ -137,7 +137,7 @@ namespace Ulfred
 				{
 					this.selectIndex++;
 					var max = Data.Instance.searchCount - 1;
-					max = max > this.findAssetAccessCounts.Count - 1 ? this.findAssetAccessCounts.Count - 1 : max;
+					max = max > this.SelectIndexMax ? this.SelectIndexMax : max;
 					this.selectIndex = this.selectIndex > max ? max : this.selectIndex;
 				}
 			}
@@ -509,6 +509,19 @@ namespace Ulfred
 				var result = this.IsCommandMode
 					? ( this.findCommandAccessCounts.Count - 1 ) - Data.Instance.searchCount
 					: ( this.findAssetAccessCounts.Count - 1 ) - Data.Instance.searchCount;
+				result = result < 0 ? 0 : result;
+
+				return result;
+			}
+		}
+
+		private int SelectIndexMax
+		{
+			get
+			{
+				var result = this.IsCommandMode
+					? ( this.findCommandAccessCounts.Count - 1 )
+					: ( this.findAssetAccessCounts.Count - 1 );
 				result = result < 0 ? 0 : result;
 
 				return result;
